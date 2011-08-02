@@ -26,7 +26,7 @@ start:
     call read_sectors
 
     ;; カーネルスタート
-    jmp KERNEL_START:0x0000
+    jmp BOOT_START_SEG:0x0200
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Sub Routine ***** ;;
@@ -46,28 +46,43 @@ print_loop:
     jnz print_loop
     ret
 
-;;; セクターの読込
+;;; セクターの読込    
 read_sectors:
-    mov cx, RETRY_NUM
-read_retry: 
-    mov ax, KERNEL_START
+    mov ax, BOOT_START_SEG
     mov es, ax
-    mov bx, 0                   ; es:bx にディスク内容を展開する
+    mov si, RETRY_NUM
+    mov ch, CYLINDER_NUM
+    mov dh, HEAD_NUM
+    mov cl, SECTOR_NUM
+.read_loop:
     mov ah, R_DISK
     mov al, SECTORS
-    mov ch, CYLINDER_NUM
-    mov cl, SECTOR_NUM
-    mov dh, HEAD_NUM
+    mov bx, 0                   ; es:bx にディスク内容を展開する
     mov dl, DRIVE_NUM
 
     int 0x13
-    jnc read_end
+    jnc .read_next
     
     ;; 失敗時にリトライを行う
-    dec cx
+    jmp read_false
+    dec si
     jz read_false
-    jmp read_retry    
-read_end:       
+    jmp .read_loop    
+.read_next:
+    mov ax, es
+    add ax, 0x0020              ; 512B 進める
+    mov es, ax
+    inc cl
+    cmp cl, 18
+    jbe .read_loop
+    mov cl, 1
+    inc dh                      ; ヘッド番号をインクリメント
+    cmp dh, 2                   ; ヘッドが1の場合は繰り返し
+    jb .read_loop
+    mov dh, 0
+    inc ch
+    cmp ch, CYLINDER_MAX
+    jb .read_loop
     ret
 
 ;;; 読込失敗

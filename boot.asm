@@ -3,7 +3,7 @@
 ;; Kernel Start  ;;
 ;;;;;;;;;;;;;;;;;;;
 
-[ORG 0x10000]
+[ORG 0x10200]
 [BITS 16]
 
 %include "base.inc.asm"
@@ -28,7 +28,10 @@ start:
     ;; プロテクトモードに移行
     mov eax, cr0
     or eax, 1
-    mov cr0, eax 
+    mov cr0, eax
+
+    ;; A20Gateを設定, 1Mバイト以上読み込めるようにする
+    call open_a20
 
     ;; magic words
     jmp $ + 2
@@ -51,12 +54,15 @@ PM_Start:
     mov fs, bx
     mov gs, bx
 
+    ;; カーネルを KERN_START 部分へ読み込む
+    call load_kern
+    
     mov edi, 0
-    lea esi, [ds:hello]   
+    lea esi, [ds:hello]
     call print
 
     ;; C言語のプログラムへ飛ぶ
-    jmp dword SysCodeSelector:0x10400
+    jmp dword KernSelector:0x0000
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Sub Routine ***** ;;
@@ -68,17 +74,17 @@ print:
     push es
     mov eax, VideoSelector
     mov es, eax
-printf_loop:
+.printf_loop:
     or al, al
-    jz printf_end
+    jz .printf_end
     mov al, byte [esi]
     mov byte [es:edi], al
     inc edi
     mov byte [es:edi], 0x06
     inc edi
     inc esi
-    jmp printf_loop
-printf_end:
+    jmp .printf_loop
+.printf_end:
     pop es
     pop eax
     ret
@@ -86,6 +92,30 @@ printf_end:
 fin:
     hlt
     jmp fin
+
+;;; A20ゲートを設定
+open_a20:    
+    call waitkbdout
+    mov al, 0xD1
+    out 0x64, al
+    call waitkbdout
+    mov al, 0xDF
+    out 0x64, al
+    call waitkbdout
+    ret
+
+waitkbdout:
+    in al, 0x64
+    and al, 0x02
+    jnz waitkbdout
+    ret
+
+load_kern:
+    mov esi, 0x10600
+    mov edi, KERN_START
+    mov ecx, 512 * 18 * 2 * CYLINDER_MAX
+    rep movsb
+    ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Data Area ***** ;;
@@ -119,7 +149,7 @@ gdt:
     db 0x00                     ; base 16 ~ 23bit
     db 0x92                     ; P:1, DPL:0, data, expand-up, writable
     db 0xCF                     ; G:1, D:1, limit 16 ~ 19 bit:0xF Gフラグが1なので1Mバイト使用できる
-    db 0x00                     ; base 24 ~ 31 bit
+    db 0x00                     ; base 24 ~ 31 bit    
     
 ;;; VideoSelector
     dw 0xFFFF                   ; limit 0xFFFF
@@ -128,7 +158,16 @@ gdt:
     db 0x92                     ; P:1, DPL:0, data, expand-up, writeable
     db 0x40                     ; G:1, D:1, limit 16 ~ 19 bit:0
     db 0x00                     ; base 24 ~ 31 bit
+
+;;; KernSelector
+    dw 0xFFFF                   ; limit 1Mバイト
+    dw 0x0000                   ; ベースアドレス 0 ~ 15 bit
+    db 0x10                     ; ベースアドレス 16 ~ 23 bit
+    db 0x9A                     ; P:1, DPL:0, Code, non-conforming, readable
+    db 0xCF                     ; G:1, D:1, limit 16 ~ 19 bit:0xF
+    db 0x00                     ; base 24 ~ 31 bit
+    
 gdt_end:    
 
-hello db "Hello World!!", 0    
+hello db "Hello World!!", 0
 times 1024 - ($ - $$) db 0

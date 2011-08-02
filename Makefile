@@ -1,5 +1,8 @@
 # Makefile
 
+ISO = os.iso
+MK_ISO = mkisofs
+
 ASM = nasm
 ASMFLAG_BIN = -f bin
 IMG = os.img
@@ -14,16 +17,19 @@ COPYFLAGS = -S -O binary
 CFLAGS = -g -Wall
 ASMFLAG_COFF = -f coff
 START_NAME = kernel_main
-START_MEM = 0x00010400 
+START_MEM = 0x00100000
 
 # Initial Process Loader, Boot Loader compile
 
 $(IMG): ipl boot $(KERNEL)
-	$(DD) if=/dev/zero of=$(IMG) bs=1 count=$(SIZE)
-	cat boot $(KERNEL) > bin
-	$(DD) if=ipl of=$(IMG) bs=1 count=512 conv=notrunc
-	$(DD) if=bin of=$(IMG) bs=1 seek=512 conv=notrunc
+	$(DD) if=/dev/zero of=$(IMG) bs=1024 count=1440
+	cat ipl boot $(KERNEL) > bin
+	$(DD) if=bin of=$(IMG) bs=1 conv=notrunc
 	$(RM) bin
+
+iso: $(IMG)
+	$(MK_ISO) -r -b $(IMG) -c boot.catalog -o $(ISO) .
+	$(RM) boot.img
 
 ipl: ipl.asm
 	$(ASM) $(ASMFLAG_BIN) ipl.asm
@@ -49,6 +55,6 @@ kernel.o: kernel.c
 
 .PHONY: clean
 clean:
-	$(RM) boot ipl $(KERNEL) $(IMG)
-	$(RM) *.o $(KERNEL)
+	$(RM) boot ipl $(KERNEL) $(IMG) $(ISO)
+	$(RM) *.o
 
