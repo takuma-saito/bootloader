@@ -10,6 +10,9 @@ SIZE = 4096
 DD = dd
 KERNEL = kernel.bin
 
+B_SRCS = ipl.asm boot.asm
+BINS = $(B_SRCS:.asm=.bin) $(KERNEL)
+
 LD = i686-coff-ld
 CC = i686-coff-gcc
 OBJCOPY = i686-coff-objcopy
@@ -17,44 +20,59 @@ COPYFLAGS = -S -O binary
 CFLAGS = -g -Wall
 ASMFLAG_COFF = -f coff
 START_NAME = kernel_main
-START_MEM = 0x00100000
+#START_MEM = 0x00100000
+C_SRCS = kernel.c # segment.c
+C_OBJS = $(C_SRCS:.c=.o)
 
 # Initial Process Loader, Boot Loader compile
 
-$(IMG): ipl boot $(KERNEL)
+# サフィックスルール
+.SUFFIXES: .c .o .bin .asm
+
+#####################
+# Create BOOT IMAGE #
+#####################
+
+$(IMG): $(BINS)
 	$(DD) if=/dev/zero of=$(IMG) bs=1024 count=1440
-	cat ipl boot $(KERNEL) > bin
-	$(DD) if=bin of=$(IMG) bs=1 conv=notrunc
+	cat $(BINS) > bin
+	$(DD) if=bin of=$(IMG) bs=256 conv=notrunc
 	$(RM) bin
 
 iso: $(IMG)
 	$(MK_ISO) -r -b $(IMG) -c boot.catalog -o $(ISO) .
-	$(RM) boot.img
 
-ipl: ipl.asm
-	$(ASM) $(ASMFLAG_BIN) ipl.asm
+.asm.bin:
+	$(ASM) -o $@ $(ASMFLAG_BIN) $<
 
-boot: boot.asm
-	$(ASM) $(ASMFLAG_BIN) boot.asm
 
-# C and Assembler compile
+###############################
+# Compile C and Assembly File #
+###############################
 
+$(KERNEL): func.o $(C_OBJS)
+#	$(LD) -e $(START_NAME) -Ttext $(START_MEM) -o $(KERNEL) func.o $(C_OBJS)
+	$(LD) -e $(START_NAME) -o $(KERNEL) func.o $(C_OBJS)
+	$(OBJCOPY) $(COPYFLAGS) kernel $(KERNEL)
+#	$(RM) kernel
+
+func.o: func.asm
+	$(ASM) -o $@ $(ASMFLAG_COFF) $<
+
+.c.o:
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+# Debug function
 # func: func.asm
 # 	$(ASM) $(ASMFLAG_BIN) func.asm
 
-$(KERNEL): func.o kernel.o
-	$(LD) -e $(START_NAME) -Ttext $(START_MEM) -o kernel func.o kernel.o
-	$(OBJCOPY) $(COPYFLAGS) kernel $(KERNEL)
-	$(RM) kernel
-
-func.o: func.asm
-	$(ASM) $(ASMFLAG_COFF) func.asm
-
-kernel.o: kernel.c
-	$(CC) $(CFLAGS) -c kernel.c
+##################################
+# Clean Objects and Binary File  #
+##################################
 
 .PHONY: clean
 clean:
-	$(RM) boot ipl $(KERNEL) $(IMG) $(ISO)
-	$(RM) *.o
+	$(RM) $(C_OBJS)
+	$(RM) *.o *.bin
+	$(RM) $(KERNEL) $(IMG) $(ISO)
 

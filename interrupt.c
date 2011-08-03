@@ -40,6 +40,7 @@ void idt_set_gate(int i, unsigned short sel, void (*f)(),
 /* idt の初期化 */
 void idt_init() {
   int i;
+  idt = (gate_t *) IDT_ADDR;
   pic_init();
 
   /* 割り込みディスクリプタの初期化 */
