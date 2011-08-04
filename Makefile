@@ -1,5 +1,8 @@
 # Makefile
 
+ARC = i686-elf
+ADDNAME += $(ARC)-
+
 ISO = os.iso
 MK_ISO = mkisofs
 
@@ -9,19 +12,19 @@ IMG = os.img
 SIZE = 4096
 DD = dd
 KERNEL = kernel.bin
+#KERNEL = func.bin
 
 B_SRCS = ipl.asm boot.asm
 BINS = $(B_SRCS:.asm=.bin) $(KERNEL)
 
-LD = i686-coff-ld
-CC = i686-coff-gcc
-OBJCOPY = i686-coff-objcopy
+LD = $(ADDNAME)ld
+CC = $(ADDNAME)gcc
+OBJCOPY = $(ADDNAME)objcopy
 COPYFLAGS = -S -O binary
 CFLAGS = -g -Wall
+LDFLAGS = -static -T ldscript.x
 ASMFLAG_COFF = -f coff
-START_NAME = kernel_main
-#START_MEM = 0x00100000
-C_SRCS = kernel.c # segment.c
+C_SRCS = kernel.c segment.c interrupt.c
 C_OBJS = $(C_SRCS:.c=.o)
 
 # Initial Process Loader, Boot Loader compile
@@ -51,10 +54,9 @@ iso: $(IMG)
 ###############################
 
 $(KERNEL): func.o $(C_OBJS)
-#	$(LD) -e $(START_NAME) -Ttext $(START_MEM) -o $(KERNEL) func.o $(C_OBJS)
-	$(LD) -e $(START_NAME) -o $(KERNEL) func.o $(C_OBJS)
+	$(LD) $(LDFLAGS) -o kernel $(C_OBJS) func.o
 	$(OBJCOPY) $(COPYFLAGS) kernel $(KERNEL)
-#	$(RM) kernel
+	$(RM) kernel
 
 func.o: func.asm
 	$(ASM) -o $@ $(ASMFLAG_COFF) $<
@@ -63,8 +65,10 @@ func.o: func.asm
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 # Debug function
-# func: func.asm
-# 	$(ASM) $(ASMFLAG_BIN) func.asm
+# func.bin: func.asm
+# 	$(ASM) -o $@ $(ASMFLAG_COFF) $<
+# 	$(LD) $(LDFLAGS) -o kernel $@
+# 	$(OBJCOPY) $(COPYFLAGS) kernel $@
 
 ##################################
 # Clean Objects and Binary File  #
@@ -73,6 +77,6 @@ func.o: func.asm
 .PHONY: clean
 clean:
 	$(RM) $(C_OBJS)
-	$(RM) *.o *.bin
+	$(RM) *.o *.bin kernel
 	$(RM) $(KERNEL) $(IMG) $(ISO)
 

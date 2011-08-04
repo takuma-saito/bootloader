@@ -5,10 +5,7 @@
 #include "kernel.h"
 
 /* ディスクリプタテーブル */ 
-seg_t *gdt = (seg_t *) GDT_ADDR;
-gate_t *idt = (gate_t *) IDT_ADDR;
 desc_tbl gdt_ptr;
-desc_tbl idt_ptr;
 
 #define SEG_32 0x80             /* segment が 32 bit の場合 */
 #define SEG_16 0x40             /* segment が 16 bit の場合 */o
@@ -30,24 +27,25 @@ static void seg_make(seg_t *seg, unsigned int limit, unsigned int addr,
 }
 
 /* セグメントをセットする */
-void seg_set(unsigned short sel, unsigned int limit, unsigned int addr,
+void seg_set(seg_t *gdt, unsigned short sel, unsigned int limit, unsigned int addr,
              unsigned char segtype, unsigned char dpl) {
   seg_make(&gdt[sel >> 3], limit, addr, segtype, dpl);
 }
 
 void gdt_init() {
   int i;
-
+  seg_t *gdt = (seg_t *) GDT_ADDR;
+  
   /* GDTの初期化 */
   for (i = 0; i < SEG_NUM; i++) {
     seg_make(gdt + i, 0, 0, 0, 0);
   }
   
   /* データセグメント */
-  seg_set(SEL_DATA, 0xffffffff, 0, TYPE_DATA, 0);
+  seg_set(gdt, SEL_DATA, 0xffffffff, 0, TYPE_DATA, 0);
   
   /* コードセグメント */
-  seg_set(SEL_CODE, 0x00100000, 0, TYPE_CODE, 0);
+  seg_set(gdt, SEL_CODE, 0x00100000, 0, TYPE_CODE, 0);
   
   /* GDTをロード */
   gdt_ptr.addr = (unsigned int) GDT_ADDR;

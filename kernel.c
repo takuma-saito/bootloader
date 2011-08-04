@@ -3,16 +3,18 @@
  * kernel: カーネルのメインルーチン *
  ************************************/
 
-/* #include "kernel.h" */
-void io_hlt();
+#include "kernel.h"
+
+/* main */
+int kernel_main(void) {
+  /* gdt_init(); */
+  while (1) {
+    print("This is Kernel Caller.");
+    io_hlt();
+  }
+  return 0;
+}
 
 void int_handler() {
 }
 
-/* main */
-int kernel_main(void) {
- fin:
-  io_hlt();
-  goto fin;
-  return 0;
-}

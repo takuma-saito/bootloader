@@ -25,7 +25,8 @@
 %define RETRY_NUM       5       ; 読込失敗時のリトライ回数
 
 ;;; グローバルディスクリプタ
-SysCodeSelector equ 0x08
-SysDataSelector equ 0x10
-VideoSelector equ 0x18
-KernSelector equ 0x20
+%define SysCodeSelector 0x08
+%define SysDataSelector 0x10
+%define VideoSelector 0x18
+%define KernSelector 0x20
+    

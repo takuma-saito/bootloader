@@ -1,12 +1,16 @@
+
+/******************************************
+ * intrrupt.c: 割り込み処理を行うルーチン *
+ ******************************************/
+
 #include "kernel.h"
 #include "interrupt.h"
-#include "gate.h"
 
+/* ディスクリプタテーブル */ 
 desc_tbl idt_ptr;
-gate_t idt[IDT_NUM];
 
 /* pic の初期化 */
-static void pic_init() {
+static void pic_init(void) {
 
   io_cli();
 
@@ -31,24 +35,37 @@ static void pic_init() {
   io_out8(SLAVE_OCW, 0xFF);
 }
 
-/* IDTコールゲートの作成 */
-void idt_set_gate(int i, unsigned short sel, void (*f)(),
+/* コールゲートを作成 */
+static void gate_make(gate_t *gate, unsigned short selector, void (*f)(),
+                unsigned short count, unsigned short type, unsigned short dpl) {
+  gate->offset_low = (unsigned short) f;
+  gate->selector = selector;
+  gate->count = count;
+  gate->type = type | (dpl << 5);
+  gate->offset_high = 0;
+}
+
+/* コールゲートをセット */
+void gate_set(gate_t *gate, unsigned short sel, void (*f)(),
                   unsigned short count, unsigned short type) {
-  gate_make(idt + i, sel, f, count, type, 0);
+  gate_make(gate, sel, f, count, type, 0);
 }
 
 /* idt の初期化 */
 void idt_init() {
   int i;
-  idt = (gate_t *) IDT_ADDR;
+  gate_t *idt = (gate_t *) IDT_ADDR;
   pic_init();
 
   /* 割り込みディスクリプタの初期化 */
   for (i = 0; i < IDT_NUM; i++) {
-    idt_set_gate(i, SEL_IDT, int_vector[i], 0, TYPE_INT_GATE, 0);
+    gate_make(idt + i, SEL_IDT, 0, 0, 0, 0);
   }
-  idt_ptr.limit = IDTNUM * sizeof(gate_t);
-  idt_ptr.base = IDT_ADDR_BASE;
-}
 
-    
+  /* idtをロード */
+  idt_ptr.addr = (unsigned int) IDT_ADDR;
+  idt_ptr.limit = (unsigned short) IDT_NUM;
+  load_idtr(&idt_ptr);
+
+  return;
+}
