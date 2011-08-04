@@ -36,19 +36,18 @@ static void pic_init(void) {
 }
 
 /* コールゲートを作成 */
-static void gate_make(gate_t *gate, unsigned short selector, void (*f)(),
-                unsigned short count, unsigned short type, unsigned short dpl) {
-  gate->offset_low = (unsigned short) f;
+static void gate_make(gate_t *gate, int offset, int selector, int ar) {
+  gate->offset_low = offset & 0xffff;
   gate->selector = selector;
-  gate->count = count;
-  gate->type = type | (dpl << 5);
-  gate->offset_high = 0;
+  gate->count = (ar >> 8) & 0xff;
+  gate->access_right = ar & 0xff;
+  gate->offset_high = (offset >> 16) & 0xffff;
+  return;
 }
 
-/* コールゲートをセット */
-void gate_set(gate_t *gate, unsigned short sel, void (*f)(),
-                  unsigned short count, unsigned short type) {
-  gate_make(gate, sel, f, count, type, 0);
+void int_keybd(int *esp) {
+  print("This is Interrupt Message.", 3, 0);
+  return;
 }
 
 /* idt の初期化 */
@@ -59,13 +58,20 @@ void idt_init() {
 
   /* 割り込みディスクリプタの初期化 */
   for (i = 0; i < IDT_NUM; i++) {
-    gate_make(idt + i, SEL_IDT, 0, 0, 0, 0);
+    gate_make(idt + i, 0, 0, 0);
   }
 
+  /* キーボード割り込み */
+  gate_make(idt + INT_KEYBD, (int) asm_int_keybd, SEL_CODE, TYPE_INT_GATE);
+
   /* idtをロード */
-  idt_ptr.addr = (unsigned int) IDT_ADDR;
-  idt_ptr.limit = (unsigned short) IDT_NUM;
-  load_idtr(&idt_ptr);
+  load_idtr(IDT_NUM_HEX, IDT_ADDR);
+
+  /* CPUの割り込み解除 */
+  io_sti();
+
+  /* キーボードの割り込み許可 */
+  io_out8(MASTER_OCW, 0xf9);
 
   return;
 }

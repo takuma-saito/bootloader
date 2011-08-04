@@ -1,19 +1,21 @@
 [BITS 32]
 %include "base.inc.asm"
     global io_hlt, io_wait, io_out8, io_out16, io_out32
-    global io_cli, io_sti, io_stihlt, print
-    global load_gdtr, load_idtr, test
+    global io_cli, io_sti, io_stihlt
+    global load_gdtr, load_idtr
+    global test, fin, print
+    global asm_int_keybd
 
     ;; void i0(void), i1(void) ... void255(void) の宣言
-%macro int_global 1
-    global i%1
-%endmacro
+;; %macro int_global 1
+;;     global i%1
+;; %endmacro
 
-%assign i 0
-%rep 256
-    int_global i
-%assign i i + 1
-%endrep
+;; %assign i 0
+;; %rep 256
+;;     int_global i
+;; %assign i i + 1
+;; %endrep
 
 [SECTION .text]
 [extern int_handler]
@@ -25,6 +27,10 @@ io_hlt:
 
 test:
     mov eax, test_msg
+    mov ebx, 0
+    mov edx, 12
+    push ebx
+    push edx
     push eax
     call print
     jmp fin
@@ -37,12 +43,13 @@ io_wait:
     ret
 
 ;;; GDT をロード
-;;; load_gdtr (desc_tbl *gdt)
+;;; load_gdtr (int limit, int addr)
 load_gdtr:
     push ebp
     mov ebp, esp
-    mov eax, [bp + 4]
-    lgdt [eax]
+    mov ax, [ebp + 8]           ; limit
+    mov [esp + 10], ax
+    lgdt [esp + 10]
     pop ebp
     ret
 
@@ -51,8 +58,9 @@ load_gdtr:
 load_idtr:
     push ebp
     mov ebp, esp
-    mov eax, [bp + 4]
-    lidt [eax]
+    mov eax, [ebp + 8]
+    mov [esp + 10], ax
+    lidt [esp + 10]
     pop ebp
     ret
 
@@ -93,17 +101,21 @@ io_stihlt:
     hlt
     ret
 
-;;; print (char *string)
+;;; print (char *string, int VIDEO_Y, int VIDEO_X)
 print:
     push ebp
     mov ebp, esp
-    push eax
     push es
     push edi
     mov eax, VideoSelector
     mov es, eax
     mov esi, [ebp + 8]
-    mov edi, 10 * VIDEO_Y
+    mov eax, [ebp + 12]         ; video y
+    mov ecx, [ebp + 16]         ; video x
+    imul eax, VIDEO_Y
+    add eax, ecx
+    imul eax, 2
+    mov edi, eax
 .printf_loop:
     or al, al
     jz .printf_end
@@ -117,7 +129,6 @@ print:
 .printf_end:
     pop edi
     pop es
-    pop eax
     pop ebp
     ret
 
@@ -126,30 +137,51 @@ fin:
     jmp fin
 
 ;;; 割り込みルーチン void i0(void), i1(void), ....
-%macro int_entry 1
-i%1:
-    push %1
-    jmp int_handler_asm
-%endmacro
+;; %macro int_entry 1
+;; i%1:
+;;     push %1
+;;     jmp int_handler_asm
+;; %endmacro
 
-%assign i 0
-%rep 256
-    int_entry i
-%assign i i + 1
-%endrep
+;; %assign i 0
+;; %rep 256
+;;     int_entry i
+;; %assign i i + 1
+;; %endrep
 
-int_handler_asm:
-    push ds
+;; int_handler_asm:
+;;     push ds
+;;     push es
+;;     pusha
+    
+;;     call int_handler
+    
+;;     popa
+;;     pop es
+;;     pop ds
+;;     iret
+
+;;; 割り込み処理ルーチン
+[extern int_keybd]
+asm_int_keybd:
     push es
-    pusha
+    push ds
+    pushad
+
+    mov eax, esp
+    push eax
+    mov ax, ss
+    mov es, ax
+    mov es, ax
+    call int_keybd
+    pop eax
     
-    call int_handler
-    
-    popa
-    pop es
+    popad
     pop ds
+    pop es
     iret
 
+[SECTION .data]
 msg db "This is Func file call.", 0
 test_msg db "This is Test Message call.", 0
 

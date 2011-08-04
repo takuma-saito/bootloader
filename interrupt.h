@@ -6,13 +6,31 @@
 #define SLAVE_ICW 0xA0          /* スレーブの初期化処理系 */
 #define SLAVE_OCW 0xA1          /* スレーブの操作処理系 */
 #define INT_BASE 0x20
-#define INT_TIMER INT_BASE | 0x00 /* タイマ割り込み */
-#define INT_KEYBD INT_BASE | 0x01 /* キーボード割り込み */
-#define INT_MOUSE INT_BASE | 0x0c /* マウス割り込み */
 #define IDT_NUM 256
 #define i(n) void i##n();
 
+#define INT_KEYBD (INT_BASE | 0x01) /* キーボード割り込み */
+#define INT_MOUSE (INT_BASE | 0x0c) /* マウス割り込み */
+
+/* ディスクリプタのセグメント属性を表す */
+#define TYPE_CODE 0x9A
+#define TYPE_DATA 0x92
+#define TYPE_STACK 0x96
+#define TYPE_LDT 0x82
+#define TYPE_TSS 0x89
+#define TYPE_TSS_BUSY 0x8b
+#define TYPE_CALL_GATE 0x84
+#define TYPE_INT_GATE 0x8e
+#define TYPE_TRAP_GATE 0x8f
+#define TYPE_TASK_GATE 0x85
+
+/* 割り込みハンドラ */
+void asm_int_keybd(int *esp);
+
+/* 割り込みハンドラを作成 */
 /* 
+ * void int_hanlder(void);
+ * 
  * /\* 割り込み処理関数の宣言 *\/
  * i(0)   i(1)   i(2)   i(3)   i(4)   i(5)   i(6)   i(7)   i(8)   i(9)
  * i(10)  i(11)  i(12)  i(13)  i(14)  i(15)  i(16)  i(17)  i(18)  i(19)

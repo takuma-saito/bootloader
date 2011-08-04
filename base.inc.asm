@@ -29,4 +29,10 @@
 %define SysDataSelector 0x10
 %define VideoSelector 0x18
 %define KernSelector 0x20
+
+;;; A20 オープン用
+%define A20_TEST_LOOPS  32 	  ; waitするたびに繰り返す回数
+%define A20_ENABLE_LOOPS 255 	  ;  テストする loop の合計
+%define A20_TEST_ADDR 4 * 0x80
+
     

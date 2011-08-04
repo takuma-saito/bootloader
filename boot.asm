@@ -30,9 +30,6 @@ start:
     or eax, 1
     mov cr0, eax
 
-    ;; A20Gateを設定, 1Mバイト以上読み込めるようにする
-    call open_a20
-
     ;; magic words
     jmp $ + 2
     nop
@@ -53,6 +50,9 @@ PM_Start:
     mov es, bx
     mov fs, bx
     mov gs, bx
+
+    ;; A20Gateを設定, 1Mバイト以上読み込めるようにする
+    call a20_enable
 
     ;; カーネルを KERN_START 部分へ読み込む
     call load_kern
@@ -94,12 +94,15 @@ fin:
     jmp fin
 
 ;;; A20ゲートを設定
-open_a20:    
+a20_enable:    
     call waitkbdout
     mov al, 0xD1
     out 0x64, al
     call waitkbdout
     mov al, 0xDF
+    out 0x60, al
+    call waitkbdout
+    mov al, 0xFF
     out 0x64, al
     call waitkbdout
     ret

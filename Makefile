@@ -1,4 +1,6 @@
-# Makefile
+##################
+# Constant Value #
+##################
 
 ARC = i686-elf
 ADDNAME += $(ARC)-
@@ -9,11 +11,9 @@ MK_ISO = mkisofs
 ASM = nasm
 ASMFLAG_BIN = -f bin
 IMG = os.img
-SIZE = 4096
 DD = dd
 KERNEL = kernel.bin
 #KERNEL = func.bin
-
 B_SRCS = ipl.asm boot.asm
 BINS = $(B_SRCS:.asm=.bin) $(KERNEL)
 
@@ -27,19 +27,18 @@ ASMFLAG_COFF = -f coff
 C_SRCS = kernel.c segment.c interrupt.c
 C_OBJS = $(C_SRCS:.c=.o)
 
-# Initial Process Loader, Boot Loader compile
-
-# サフィックスルール
-.SUFFIXES: .c .o .bin .asm
 
 #####################
 # Create BOOT IMAGE #
 #####################
 
+# サフィックスルール
+.SUFFIXES: .c .o .bin .asm
+
 $(IMG): $(BINS)
-	$(DD) if=/dev/zero of=$(IMG) bs=1024 count=1440
+	$(DD) if=/dev/zero of=$@ bs=1024 count=1440
 	cat $(BINS) > bin
-	$(DD) if=bin of=$(IMG) bs=256 conv=notrunc
+	$(DD) if=bin of=$@ bs=256 conv=notrunc
 	$(RM) bin
 
 iso: $(IMG)
@@ -69,6 +68,7 @@ func.o: func.asm
 # 	$(ASM) -o $@ $(ASMFLAG_COFF) $<
 # 	$(LD) $(LDFLAGS) -o kernel $@
 # 	$(OBJCOPY) $(COPYFLAGS) kernel $@
+
 
 ##################################
 # Clean Objects and Binary File  #
