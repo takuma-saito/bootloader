@@ -6,11 +6,13 @@
 #include "kernel.h"
 #define PRINT_Y(string, y) print(string, y, 0)
 
+void empty() {
+}
+
 /* 
- * kernel_main がカーネルローダーから読み込まれる
- * この前に関数を定義してはならない (コンパイルしても動作しないため)
+ * ローダーによって main 関数が呼び出される
  */
-int kernel_main(void) {
+int main(void) {
   gdt_init();
   idt_init();
   while (1) {
@@ -18,8 +20,5 @@ int kernel_main(void) {
     io_hlt();
   }
   return 0;
-}
-
-void fuga() {
 }
 

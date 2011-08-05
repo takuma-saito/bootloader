@@ -26,7 +26,7 @@ LDFLAGS = -static -T ldscript.x
 ASMFLAG_COFF = -f coff
 C_SRCS = kernel.c segment.c interrupt.c
 C_OBJS = $(C_SRCS:.c=.o)
-
+DEPENDS = $(C_SRCS:%.c=%.d)
 
 #####################
 # Create BOOT IMAGE #
@@ -45,7 +45,10 @@ iso: $(IMG)
 	$(MK_ISO) -r -b $(IMG) -c boot.catalog -o $(ISO) .
 
 .asm.bin:
-	$(ASM) -o $@ $(ASMFLAG_BIN) $<
+	$(ASM) -o $@ $(ASMFLAG_BIN) $< -l $@.list
+
+boot.bin boot.asm : config.asm
+ipl.bin ipl.asm : config.asm
 
 
 ###############################
@@ -77,6 +80,12 @@ func.o: func.asm
 .PHONY: clean
 clean:
 	$(RM) $(C_OBJS)
-	$(RM) *.o *.bin kernel
+	$(RM) *.o *.bin *.list *.d kernel
 	$(RM) $(KERNEL) $(IMG) $(ISO)
+
+%.d: %.c
+	@set -e; $(CC) -MM $(CFLAGS) $< \
+                | sed 's/\($*\)\.o[ :]*/\1.o $@ : /g' > $@; \
+                [ -s $@ ] || rm -f $@
+-include $(DEPENDS)
 

@@ -1,5 +1,5 @@
 [BITS 32]
-%include "base.inc.asm"
+%include "config.asm"
     global io_hlt, io_wait, io_out8, io_out16, io_out32
     global io_cli, io_sti, io_stihlt
     global load_gdtr, load_idtr
@@ -17,8 +17,13 @@
 ;; %assign i i + 1
 ;; %endrep
 
+[SECTION .startup]
+[EXTERN main]
+_start:
+    jmp main
+
 [SECTION .text]
-[extern int_handler]
+[EXTERN int_handler]
 
 ;;; 処理待ち (CPU節約)
 io_hlt:

@@ -6,7 +6,7 @@
 [ORG 0x7C00]
 [BITS 16]
 
-%include "base.inc.asm"
+%include "config.asm"
 
 ;;;;;;;;;;;;;;;;;;
 ;; Main Routine ;;
@@ -31,6 +31,27 @@ start:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Sub Routine ***** ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    
+;;; メッセージの出力 (16bit)
+printf_16:
+    push ax
+    push es
+    mov ax, VideoSelector
+    mov es, ax
+.printf_loop:
+    or al, al
+    jz .printf_end
+    mov al, byte [si]
+    mov byte [es:di], al
+    inc di
+    mov byte [es:di], 0x06
+    inc di
+    inc si
+    jmp .printf_loop
+.printf_end:
+    pop es
+    pop ax
+    ret
 
 ;;; 背景の出力
 print_bg:
@@ -38,12 +59,12 @@ print_bg:
     mov es, ax
     mov ax, word [msg_bg]
     mov di, 0
-    mov cx,  VIDEO_X * VIDEO_Y 
-print_loop:
+    mov cx,  VIDEO_X * VIDEO_Y
+.print_loop:
     mov word [es:di], ax
     add di, 2
     dec cx
-    jnz print_loop
+    jnz .print_loop
     ret
 
 ;;; セクターの読込    
@@ -89,30 +110,8 @@ read_sectors:
 read_false:
     mov si, msg_false
     mov di, 0
-    call printf
+    call printf_16
     jmp fin
-
-;;; 文字列の出力
-printf:
-    push ax
-    push es
-    mov ax, VIDEO_MEM
-    mov es, ax
-    mov al, byte [si]
-printf_loop:    
-    mov al, byte [si]
-    mov byte [es:di], al
-    inc di
-    inc si
-    mov byte [es:di], 0x06
-    inc di
-    or al, al                  ; al が 0 かどうかを調べる
-    jz printf_end
-    jmp printf_loop
-printf_end:
-    pop es
-    pop ax
-    ret
 
 fin:
     hlt

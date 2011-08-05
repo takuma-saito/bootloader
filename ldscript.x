@@ -1,12 +1,13 @@
 OUTPUT_FORMAT("coff-i386")
 SEARCH_DIR("/usr/local/gnu/i686-coff/lib");
-ENTRY (kernel_main)
+ENTRY (main)
 SECTIONS {
   . = 0x00100000;
+  .startup : {
+    *(.startup)
+  }
   .text . : {
-    *(.init)
     *(.text)
-    *(.fini)
   }
   .data . : {
     *(.data)
@@ -15,13 +16,5 @@ SECTIONS {
   .bss SIZEOF(.data) + ADDR(.data) : {
     *(.bss)
     *(COMMON)
-  }
-  .stab  0 (NOLOAD) :
-  {
-    [ .stab ]
-  }
-  .stabstr  0 (NOLOAD) :
-  {
-    [ .stabstr ]
   }
 }

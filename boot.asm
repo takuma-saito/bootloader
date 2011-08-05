@@ -6,7 +6,7 @@
 [ORG 0x10200]
 [BITS 16]
 
-%include "base.inc.asm"
+%include "config.asm"
 %define GDT_LIMIT gdt_end - gdt - 1
 %define GDT_BASE gdt
 
@@ -21,21 +21,95 @@ start:
     xor ax, ax
     mov ss, ax
 
+    ;; 画面描画モードの移行 （時が来たら使用する）
+    ;; call change_screen_mode
+
     ;; グローバルディスクリプタを設定
     cli
     lgdt [gdtr]
 
     ;; プロテクトモードに移行
+    call change_PMmode
+    jmp to_PM_Start
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ***** Sub Routines 16Bit ***** ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; ipt.asm と重複しているコード require Fix !
+printf_16:
+    push ax
+    push es
+    mov ax, VIDEO_MEM
+    mov es, ax
+    mov al, byte [si]
+.printf_loop:    
+    mov al, byte [si]
+    mov byte [es:di], al
+    inc di
+    inc si
+    mov byte [es:di], 0x06
+    inc di
+    or al, al                  ; al が 0 かどうかを調べる
+    jz .printf_end
+    jmp .printf_loop
+.printf_end:
+    pop es
+    pop ax
+    ret
+
+;;; プロテクテッドモードに移行
+change_PMmode:    
     mov eax, cr0
     or eax, 1
     mov cr0, eax
+    ret
 
-    ;; magic words
+;;; PM_Start に移行
+to_PM_Start:
     jmp $ + 2
     nop
-    nop
-
+    nop    
     jmp dword SysCodeSelector:PM_Start
+
+;;; スクリーンモードを変更
+change_screen_mode:
+    ;; 情報を格納するメモリアドレスを指定
+    mov ax, 0x9000
+    mov es, ax
+    mov di, 0
+    call get_screen_info
+    call get_screen_mode
+    jmp fin
+    call set_screen_mode
+    ret
+
+get_screen_info:
+    mov ax, 0x4f00
+    int 0x10
+    cmp ax, 0x004f
+    jnz disp_error
+    ret
+
+get_screen_mode:
+    mov ax, 0x4f01
+    mov cx, VIDEO_MODE
+    int 0x10
+    cmp ax, 0x004f
+    jnz disp_error
+    ret
+
+set_screen_mode:
+    mov bx, VIDEO_MODE
+    mov ax, 0x4f02
+    int 0x10
+    ret
+
+disp_error:
+    mov di, 0
+    lea si, [ds:disp_error_msg]
+    call printf_16
+    jmp fin
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Main Routine (Protected Mode)  ***** ;;
@@ -59,17 +133,17 @@ PM_Start:
     
     mov edi, 0
     lea esi, [ds:hello]
-    call print
+    call printf_32
 
     ;; C言語のプログラムへ飛ぶ
     jmp dword KernSelector:0x0000
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ***** Sub Routine ***** ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    
-;;; メッセージを出力する
-print:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; ***** Sub Routine 32Bit ***** ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; メッセージを出力する (32bit)
+printf_32:
     push eax
     push es
     mov eax, VideoSelector
@@ -87,11 +161,7 @@ print:
 .printf_end:
     pop es
     pop eax
-    ret
-
-fin:
-    hlt
-    jmp fin
+    ret    
 
 ;;; A20ゲートを設定
 a20_enable:    
@@ -119,6 +189,11 @@ load_kern:
     mov ecx, 512 * 18 * 2 * CYLINDER_MAX
     rep movsb
     ret
+
+;;; 終了
+fin:
+    hlt
+    jmp fin
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; ***** Data Area ***** ;;
@@ -173,4 +248,5 @@ gdt:
 gdt_end:    
 
 hello db "Hello World!!", 0
+disp_error_msg db "Error occured in proccessing display mode.", 0
 times 1024 - ($ - $$) db 0

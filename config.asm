@@ -4,6 +4,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; 画像処理
+%define VIDEO_MODE 0x11c
 %define VIDEO_MEM   0xB800
 %define VIDEO_X     25
 %define VIDEO_Y     80
