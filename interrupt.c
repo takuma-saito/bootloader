@@ -3,6 +3,7 @@
  * intrrupt.c: 割り込み処理を行うルーチン *
  ******************************************/
 
+#include "stdlib.h"
 #include "kernel.h"
 #include "interrupt.h"
 
@@ -46,7 +47,13 @@ static void gate_make(gate_t *gate, int offset, int selector, int ar) {
 }
 
 void int_keybd(int *esp) {
-  print("This is Interrupt Message.", 3, 0);
+  char data;
+  int int_num;
+  /* 完了通知 */
+  io_out8(MASTER_ICW, 0x61);
+  data = io_in8(INT_KEYBD);
+  int_num = (int) data;
+  print(int_num, 3, 0);
   return;
 }
 

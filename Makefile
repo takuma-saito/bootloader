@@ -3,7 +3,7 @@
 ##################
 
 ARC = i686-elf
-ADDNAME += $(ARC)-
+ADDNAME += $(ARC)
 
 ISO = os.iso
 MK_ISO = mkisofs
@@ -17,12 +17,12 @@ KERNEL = kernel.bin
 B_SRCS = ipl.asm boot.asm
 BINS = $(B_SRCS:.asm=.bin) $(KERNEL)
 
-LD = $(ADDNAME)ld
-CC = $(ADDNAME)gcc
-OBJCOPY = $(ADDNAME)objcopy
+LD = $(ADDNAME)-ld
+CC = $(ADDNAME)-gcc
+OBJCOPY = $(ADDNAME)-objcopy
 COPYFLAGS = -S -O binary
 CFLAGS = -g -Wall
-LDFLAGS = -static -T ldscript.x
+LDFLAGS = -static -T ldscript.x -L/usr/local/gnu/$(ADDNAME)/lib -I/usr/local/gnu/$(ADDNAME)/lib/sys-include -lc
 ASMFLAG_COFF = -f coff
 C_SRCS = kernel.c segment.c interrupt.c
 C_OBJS = $(C_SRCS:.c=.o)
@@ -56,7 +56,7 @@ ipl.bin ipl.asm : config.asm
 ###############################
 
 $(KERNEL): func.o $(C_OBJS)
-	$(LD) $(LDFLAGS) -o kernel $(C_OBJS) func.o
+	$(LD) $(C_OBJS) func.o -o kernel $(LDFLAGS)
 	$(OBJCOPY) $(COPYFLAGS) kernel $(KERNEL)
 	$(RM) kernel
 

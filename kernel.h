@@ -16,6 +16,8 @@
 #define SEG_NUM_HEX 0xffff
 #define IDT_NUM_HEX 0x07ff
 
+#define BUFF 256
+
 /* func.asm で定義 */
 void lidt(void);
 void io_hlt(void);
@@ -28,6 +30,9 @@ void load_idtr();
 void io_out8(int port, int data);
 void io_out16(int port, int data);
 void io_out32(int port, int data);
+int io_in8(int port);
+int io_in16(int port);
+int io_in32(int port);
 void print(char *string, int y, int x);
 void test(void);
 void fin(void);

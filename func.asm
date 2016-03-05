@@ -1,7 +1,7 @@
 [BITS 32]
 %include "config.asm"
-    global io_hlt, io_wait, io_out8, io_out16, io_out32
-    global io_cli, io_sti, io_stihlt
+    global io_out8, io_out16, io_out32, io_in8, io_in16, io_in32
+    global io_cli, io_sti, io_stihlt, io_hlt, io_wait,
     global load_gdtr, load_idtr
     global test, fin, print
     global asm_int_keybd
@@ -17,6 +17,7 @@
 ;; %assign i i + 1
 ;; %endrep
 
+;;; スタートアップルーチン
 [SECTION .startup]
 [EXTERN main]
 _start:
@@ -29,18 +30,6 @@ _start:
 io_hlt:
     hlt
     ret
-
-test:
-    mov eax, test_msg
-    mov ebx, 0
-    mov edx, 12
-    push ebx
-    push edx
-    push eax
-    call print
-    jmp fin
-    ret
-
 
 ;;; 処理待ち (CPU稼働)
 io_wait:
@@ -88,6 +77,27 @@ io_out32:
     mov edx, [esp + 4]          ; port
     mov eax, dword [esp + 8]    ; data
     out dx, eax
+    ret
+
+;;; io_in8(int port)
+io_in8:
+    mov edx, [esp + 4]
+    xor eax, eax
+    mov dl, al
+    ret
+
+;;; io_in16(int port)
+io_in16:
+    mov edx, [esp + 4]
+    xor eax, eax
+    mov dx, ax
+    ret
+
+;;; io_in32(int port)
+io_in32:
+    mov edx, [esp + 4]
+    xor eax, eax
+    mov edx, eax
     ret
 
 ;;; clear IF
